@@ -156,7 +156,7 @@ module MyExtension
 
     # Split text into lines shorter than the image width minus 10mm
     text_width = text_group.bounds.width
-    max_text_width = width - 10.mm
+    max_text_width = width - 15.mm
     if text_width > max_text_width
       # Calculate the average letter width
       letter_width = text_width / text_string.length
