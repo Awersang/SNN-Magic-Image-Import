@@ -148,9 +148,6 @@ def build_frame(fw,fh,fd,w,h,d, type, current_x)
     model = Sketchup.active_model
     entities = model.active_entities
 
-    # Start a new operation
-    model.start_operation("Draw Frame", true)
-
     # Define the frame types
     frame_types = {
         1 => {distances: [0, 1], divisions: []},
@@ -173,10 +170,9 @@ def build_frame(fw,fh,fd,w,h,d, type, current_x)
     profiles[1..-2].each do |profile|
         profile.each do |line|
             line.soft = true
+            line.smooth = true
         end
     end
-
-    model.commit_operation
 
     frame
 end

@@ -22,6 +22,10 @@ module MyExtension
       }
       # Define the callback for the "ok_callback"
       dialog.add_action_callback('ok_callback') { |action_context, data_json|
+
+        # start the operation
+        Sketchup.active_model.start_operation('Import Images', true)
+
         # Parse the JSON data received from the HTML
         data = JSON.parse(data_json)
 
@@ -47,6 +51,8 @@ module MyExtension
 
         # Close the dialog if needed
         dialog.close
+        # Commit the operation
+        Sketchup.active_model.commit_operation
       }
       dialog.add_action_callback('cancel_callback') { |action_context, _|
         # Handle the cancel action here (e.g., close the dialog)
@@ -188,10 +194,6 @@ module MyExtension
                       
       # Increment the x position for the next image
       current_x += spacing_width + spacing
-
-      Sketchup.active_model.commit_operation
-      
-
 
     end
     puts ("import completed #{image_import_counter} of #{number_of_images_to_import}")
