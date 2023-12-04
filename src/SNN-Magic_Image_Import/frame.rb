@@ -1,5 +1,3 @@
-
-
 def divide_lines(lines, divisions)
     # Initialize an array to store the vertices
     vertices = []
@@ -158,7 +156,7 @@ def build_frame(fw,fh,fd,w,h,d, type, current_x)
         1 => {distances: [0, 1], divisions: []},
         2 => {distances: [0.0, 0.1, 0.0, 1.0, 1.0], divisions: [0.05, 0.1, 0.9]},
         3 => {distances: [0.0, 0.066, 0.083, 0.066, 0.0, 0.1, 0.133, 0.1, 0.0, 0.0, 0.166, 0.46, 0.86, 1.0, 1.0],
-            divisions: [0.01, 0.035, 0.06,   0.07, 0.1, 0.135, 0.17, 0.2,   0.4, 0.59, 0.77, 0.89, 0.9]}
+            divisions: [0.01, 0.035, 0.06, 0.07, 0.1, 0.135, 0.17, 0.2, 0.4, 0.59, 0.77, 0.89, 0.9]}
     }
 
     # Get the distances and divisions from the frame types
@@ -182,49 +180,3 @@ def build_frame(fw,fh,fd,w,h,d, type, current_x)
 
     frame
 end
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# model = Sketchup.active_model
-# entities = model.active_entities
-# # # clear the model
-# entities.clear!
-
-# # Define the dimensions of the outer square
-# fw = 600.mm
-# fh = 700.mm
-# fd = 100.mm
-
-# # Define the dimensions of the inner square
-# w = 500.mm
-# h = 500.mm
-# d = 20.mm
-
-# # Define the frame type (1, 2, or 3)
-# type = 3
-
-# build_frame(fw,fh,fd,w,h,d, type, current_x)
-
-# Sketchup.active_model.active_entities.clear!

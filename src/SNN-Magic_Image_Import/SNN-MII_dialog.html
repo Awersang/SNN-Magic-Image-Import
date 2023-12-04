@@ -137,44 +137,11 @@
   </style>
   <title>Magic Image Import</title>
 </head>
-
 <body>
   <div id="message-box"></div>
-  <div class="tab-links">
-    <a href="#" class="active" data-tab="from-files">From Files</a>
-    <a href="#" data-tab="from-table">From Table</a>
-  </div>
-  <div class="tab active" id="from-files">
-    <div class="container top">
-        <label for="folder">Select Files:</label>
-        <input type="file" id="files" multiple>
-    </div>
-  </div>
-  <div class="tab" id="from-table">
-    <div class="tab grid-container" id="from-table">
-      <div class="grid-item">
-        <label for="table-file">Select Table File:</label>
-        <input type="file" id="table-file">
-      </div>
-      <div class="grid-item">
-        <label for="spreadsheet">Spreadsheet:</label>
-        <select id="spreadsheet">
-          <option value="">Select Spreadsheet</option>
-        </select>
-      </div>
-      <div class="grid-item">
-        <label for="column-image-paths">Image Path Column :</label>
-        <select id="column-image-paths">
-          <option value="">Select Column</option>
-        </select>
-      </div>
-      <div class="grid-item">
-        <label for="column-image-size">Image Size Column:</label>
-        <select id="column-image-size">
-          <option value="">Select Column</option>
-        </select>
-      </div>
-    </div>
+  <div class="container top">
+      <label for="folder">Select Files:</label>
+      <input type="file" id="files" multiple>
   </div>
   <hr>
   <div class="drawing-options">
@@ -244,188 +211,9 @@
       window.location = 'skp:puts_callback@' + encodeURIComponent(JSON.stringify(params));
     }
 
-
-    // TABS - Define a function to handle tab switching
-    function switchTab(event) {
-      event.preventDefault();
-      var clickedTab = event.target;
-      var tabId = clickedTab.getAttribute("data-tab");
-      var activeTab = document.querySelector(".tab.active");
-      var activeTabLink = document.querySelector(".tab-links a.active");
-      if (activeTab) {
-        activeTab.classList.remove("active");
-      }
-      if (activeTabLink) {
-        activeTabLink.classList.remove("active");
-      }
-      clickedTab.classList.add("active");
-      document.getElementById(tabId).classList.add("active");
-    }
-
-    // TABS - Event listeners to tab links
-    var tabLinks = document.querySelectorAll(".tab-links a");
-    for (var i = 0; i < tabLinks.length; i++) {
-      tabLinks[i].addEventListener("click", switchTab);
-    }
-
-    // The TABLE - Event listeners to handle the file input change
-    document.getElementById("table-file").addEventListener("change", function () {
-      clearDropdowns(); // Clear existing dropdowns
-      var fileInput = document.getElementById("table-file");
-      var fileName = fileInput.files[0].name;
-      var fileExtension = fileName.split('.').pop().toLowerCase();
-      if (fileExtension === "xls" || fileExtension === "xlsx") {
-        // Load the Excel file
-        var reader = new FileReader();
-        reader.addEventListener("load", function (e) {
-          var data = e.target.result;
-          var workbook = XLSX.read(data, { type: 'binary' });
-          // Get the sheet names
-          var sheetNames = workbook.SheetNames;
-          // Load the sheet names into the dropdown menu
-          loadSheetNames(sheetNames, workbook);
-        });
-        reader.readAsBinaryString(fileInput.files[0]);
-      } else {
-        // Invalid file format
-        alert("Invalid file format. Please select a CSV or Excel file.");
-        fileInput.value = "";
-      }
-    });
-
-    //function to load the sheet names into the dropdown menu
-    function loadSheetNames(sheetNames, workbook) {
-      // Clear the sheet dropdown menu
-      clearDropdowns();
-      // Load the sheet names into the dropdown menu
-      var spreadsheetDropdown = document.getElementById("spreadsheet");
-      for (var i = 0; i < sheetNames.length; i++) {
-        var sheetName = sheetNames[i];
-        var option = document.createElement("option");
-        option.value = sheetName;
-        option.text = sheetName;
-        spreadsheetDropdown.add(option);
-      }
-      // Add an event listener to the spreadsheet dropdown menu
-      var spreadsheetDropdown = document.getElementById("spreadsheet");
-      spreadsheetDropdown.addEventListener("change", function () {
-        // Get the selected sheet name
-        var sheetName = this.value;
-        // Get the worksheet for the selected sheet
-        var worksheet = workbook.Sheets[sheetName];
-        // Load the column names for the selected sheet
-        loadColumnNames(getColumnNames(worksheet));
-      });
-    }
-
-    // Function to get the column names from an Excel worksheet
-    function getColumnNames(worksheet) {
-      var columnNames = [];
-      var range = XLSX.utils.decode_range(worksheet['!ref']);
-      for (var C = range.s.c; C <= range.e.c; ++C) {
-        var cell = worksheet[XLSX.utils.encode_cell({ r: range.s.r, c: C })];
-        if (cell && cell.t) {
-          columnNames.push(XLSX.utils.format_cell(cell));
-        }
-      }
-      return columnNames;
-    }
-
-    // Function to load the column names into the dropdown menus
-    function loadColumnNames(columnNames) {
-      // Clear the dropdown menus
-      clearColumnDropdowns();
-      // Load the column names into the dropdown menus
-      var columnDropdowns = document.querySelectorAll("*[id*='column-image']");
-      for (var i = 0; i < columnDropdowns.length; i++) {
-        var dropdown = columnDropdowns[i];
-        for (var j = 0; j < columnNames.length; j++) {
-          var columnName = columnNames[j];
-          var option = document.createElement("option");
-          option.value = columnName;
-          option.text = columnName;
-          dropdown.add(option);
-        }
-      }
-    }
-
-    // Function to clear the dropdown menus
-    function clearDropdowns() {
-      var sheetDropdown = document.getElementById("spreadsheet");
-      sheetDropdown.innerHTML = '<option value="">Select Sheet</option>';
-      clearColumnDropdowns();
-
-    }
-
-    function clearColumnDropdowns() {
-      var imagePathsDropdown = document.getElementById("column-image-paths");
-      var imageSizeDropdown = document.getElementById("column-image-size");
-      imagePathsDropdown.innerHTML = '<option value="">Select Image Paths Column</option>';
-      imageSizeDropdown.innerHTML = '<option value="">Select Image Size Column</option>';
-    }
-
-
-    /////////////////////
-    // TU JEST CHUJNIA://
-    /////////////////////
-
-    // Function to extract a table with image paths and image sizes from an Excel file
-    function extractTable(spreadsheet, columnImagePaths, columnImageSize) {
-      return new Promise(function (resolve, reject) {
-        var fileInput = document.getElementById("table-file");
-        var selectedFile = fileInput.files[0];
-        // Create a new FileReader object
-        var reader = new FileReader();
-        // Set up a callback function for when the file is loaded
-        reader.addEventListener("load", function (e) {
-          var data = e.target.result;
-          var workbook = XLSX.read(data, { type: 'binary' });
-          // extract sheet with given name
-          var worksheet = workbook.Sheets[spreadsheet];
-          // extract column names from first row
-          var columnNames = [];
-          var range = XLSX.utils.decode_range(worksheet['!ref']);
-          for (var C = range.s.c; C <= range.e.c; ++C) {
-            var cell = worksheet[XLSX.utils.encode_cell({ r: range.s.r, c: C })];
-            if (cell && cell.t) {
-              columnNames.push(XLSX.utils.format_cell(cell));
-            }
-          }
-          // find indices of columnImagePaths and columnImageSize columns
-          var columnImagePathsIndex = columnNames.indexOf(columnImagePaths);
-          var columnImageSizeIndex = columnNames.indexOf(columnImageSize);
-          // loop over rows of the table and extract the image paths and image sizes, output them as a list of lists
-          var table = [];
-          for (var R = range.s.r + 1; R <= range.e.r; ++R) {
-            var row = [];
-            var cell = worksheet[XLSX.utils.encode_cell({ r: R, c: columnImagePathsIndex })];
-            if (cell && cell.t) {
-              row.push(XLSX.utils.format_cell(cell));
-            }
-            var cell = worksheet[XLSX.utils.encode_cell({ r: R, c: columnImageSizeIndex })];
-            if (cell && cell.t) {
-              var sizeString = XLSX.utils.format_cell(cell);
-              var sizeParts = sizeString.split('x');
-              var size = [parseInt(sizeParts[0]), parseInt(sizeParts[1])];
-              row.push(size);
-            }
-            table.push(row);
-          }
-          resolve(table);
-        });
-        // Set up a callback function for when an error occurs
-        reader.addEventListener("error", function (e) {
-          reject(e);
-        });
-        // Read the file as a binary string
-        reader.readAsBinaryString(selectedFile);
-      });
-    }
-
       // Function to handle the OK button click
     document.getElementById("ok").addEventListener("click", function () {
       // Get the selected files
-      puts('dupa')
       var selectedFiles = [];
       var fileInput = document.getElementById("files");
       for (var i = 0; i < fileInput.files.length; i++) {
@@ -440,10 +228,6 @@
       var frameDepth = document.getElementById("frame_depth").value; // Get the frame depth
       var addFrameToAll = document.getElementById("add_to_all").checked; // Get the add frame to all checkbox value
       var spacing = document.getElementById("spacing").value; // Get the spacing value
-      var tableFilePath = document.getElementById("table-file").value; // Get the table file path
-      var spreadsheet = document.getElementById("spreadsheet").value; // Get the spreadsheet name
-      var columnImagePaths = document.getElementById("column-image-paths").value; // Get the image paths column
-      var columnImageSize = document.getElementById("column-image-size").value; // Get the image size column
 
       // Create an object to pass to the Ruby script
       var data = {
@@ -457,30 +241,11 @@
         frame_depth: frameDepth,
         add_frame_to_all: addFrameToAll,
       };
-
-
-      if (columnImagePaths && columnImageSize) {
-        extractTable(spreadsheet, columnImagePaths, columnImageSize)
-          .then(function (table) {
-            // Add the table object to the data object
-            data.table = table;
-            // Send the data back to the Ruby script
-            var encodedData = encodeURIComponent(JSON.stringify(data));
-            window.location = 'skp:ok_callback@' + encodedData;
-          })
-          .catch(function (error) {
-            // Handle the error
-          });
-      } else {
-        data.table = null;
-        // Send the data back to the Ruby script
-        var encodedData = encodeURIComponent(JSON.stringify(data));
-        window.location = 'skp:ok_callback@' + encodedData;
-      }
-
-
-
-
+     
+      // Send the data back to the Ruby script
+      var encodedData = encodeURIComponent(JSON.stringify(data));
+      window.location = 'skp:ok_callback@' + encodedData;
+      
     });
 
     // Function to handle the Cancel button click
@@ -488,7 +253,6 @@
         // Close the dialog
         window.location = 'skp:cancel_callback@';
       });
-
 
   </script>
 </body>

@@ -8,7 +8,7 @@ module MyExtension
         dialog_title: 'SNN - Magic Image Import',
         style: UI::HtmlDialog::STYLE_DIALOG,
         width: 500,
-        height: 750,
+        height: 600,
       }
       dialog = UI::HtmlDialog.new(options)
       dialog.set_size(options[:width], options[:height])
@@ -32,22 +32,17 @@ module MyExtension
         text_size = data['text_size'].to_i.mm
         add_text = data['add_text']
         spacing = data['spacing'].to_i.mm
-        table = data['table']
         frame_type = data['frame_type'].to_i
         default_frame_width = data['frame_width'].to_i.mm
         default_frame_depth = data['frame_depth'].to_i.mm
         add_frame_to_all = data['add_frame_to_all']
 
-
         # check for existance of relevant layers
         MyExtension.check_layers(['frames', 'images', 'names', 'art'])
 
-        #check if table is empty
-        if table.nil?
-          MyExtension.import_images_from_files(selected_files, default_image_depth, text_size, add_text, spacing, frame_type, default_frame_width, default_frame_depth, add_frame_to_all)
-        else
-          MyExtension.import_images_from_table(table, default_image_depth, text_size, add_text, spacing)
-        end
+
+        MyExtension.import_images_from_files(selected_files, default_image_depth, text_size, add_text, spacing, frame_type, default_frame_width, default_frame_depth, add_frame_to_all)
+
         # Close the dialog if needed
         dialog.close
       }
@@ -121,7 +116,7 @@ module MyExtension
             spacing_width = frame_width - (frame_width - width) / 2
           #  if add_frame_to_all is true
           elsif add_frame_to_all
-            current_x += (default_frame_width - width) / 2
+            current_x += default_frame_width
             frame = build_frame(width + 2 * default_frame_width, height + 2 * default_frame_width, default_frame_depth, width, height, depth, frame_type, current_x)
             spacing_width = width + default_frame_width
           else
@@ -133,7 +128,6 @@ module MyExtension
         if frame
           frame.layer = Sketchup.active_model.layers['frames']
         end
-
 
         # Import the image
         image = entities.add_image(image_file, [current_x, -height / 2, depth], width, height)
@@ -152,8 +146,6 @@ module MyExtension
           # add the text to the names layer
           text_group.layer = Sketchup.active_model.layers['names']
         end
-
-
 
         # Group the image, box, and text and frame together if they exist
         if frame && text_group
@@ -175,9 +167,6 @@ module MyExtension
         next
       end
                       
-
-
-
       # Increment the x position for the next image
       current_x += spacing_width + spacing
 
@@ -188,41 +177,6 @@ module MyExtension
     end
     puts ("import completed #{image_import_counter} of #{number_of_images_to_import}")
 
-  end
-
-  def self.import_images_from_table(table, image_depth, text_size, add_text, spacing)
-    entities  = Sketchup.active_model.entities
-    current_x = 0.mm
-    bottom_offset = 30.mm
-
-    #iterate through the table
-    table.each do |row|
-      width = row[1][1].to_i.mm
-      height = row[1][2].to_i.mm
-
-      # Import the image
-      image = entities.add_image(row[0], [current_x, 0, image_depth], width, height)
-
-      # Create a bounding box around the image
-      box = build_box(entities, image, image_depth)
-
-      # Add text object with the file name (without extension) if add_text is true
-      if add_text
-        text_group = addNameText(entities, File.basename(row[0], '.*'), text_size, current_x, bottom_offset, image_depth, width)
-        # Group the image, box, and text together
-        image_group = entities.add_group([image, box, text_group])
-      else
-        # Group the image and box together
-        image_group = entities.add_group([image, box])
-      end
-
-      # Increment the x position for the next image
-      current_x += width + spacing
-
-      Sketchup.active_model.commit_operation
-      puts 'import completed'
-
-    end
   end
 
   def self.build_box(entities, image, image_depth)
@@ -305,5 +259,3 @@ module MyExtension
     file_loaded(__FILE__)
   end
 end
-
-# kupa
