@@ -121,7 +121,7 @@ def draw_base_frame(entities, fw,fh,w,h,d, current_x)
     # # Pass the lines to the divide_lines function
     # vertices = divide_lines(frame,lines, [5, 5])
 
-    puts("lines", lines)
+    # puts("lines", lines)
 
     # # Connect the corresponding vertices with lines and store them in an array
     # lines = top_vertices.each_with_index.map do |vertex, index|
@@ -140,7 +140,6 @@ def shape_the_frame(frame, lines, distances, divisions)
     profiles = create_lines_from_points_arrays(frame, vertices)
     
     # Shape the profiles
-    puts("distances", distances)
     frame = move_profiles_up(frame, profiles, distances)
 
     return frame, profiles
@@ -165,10 +164,6 @@ def build_frame(fw,fh,fd,w,h,d, type, current_x)
     # Get the distances and divisions from the frame types
     distances = frame_types[type][:distances].map { |distance| distance * (fd-d).to_mm }
     divisions = frame_types[type][:divisions]
-    # puts("distances", distances)
-    
-    puts("look here", (fd-d).to_mm)
-    puts("look here", distances)
 
     # Draw the base frame
     frame, lines = draw_base_frame(entities, fw,fh,w,h,d, current_x)

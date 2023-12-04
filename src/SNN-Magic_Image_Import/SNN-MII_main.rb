@@ -39,15 +39,6 @@ module MyExtension
         add_frame_to_all = data['add_frame_to_all']
 
 
-        # Handle the data as needed
-        puts "Selected Files: #{selected_files}"
-        puts "Depth Value: #{default_image_depth}"
-        puts "Text Size: #{text_size}"
-        puts "Add Text: #{add_text}"
-        puts "Spacing: #{spacing}"
-        puts "Table : #{table}"
-
-
         # check for existance of relevant layers
         MyExtension.check_layers(['frames', 'images', 'names', 'art'])
 
@@ -68,7 +59,6 @@ module MyExtension
     end
   end
 
-
   def self.check_layers(layers_names)
     # checks if the layers in layers_names exist and creates them if they dont.
     layers_names.each do |layer_name|
@@ -80,10 +70,13 @@ module MyExtension
   end
 
   def self.import_images_from_files(image_files, default_image_depth, text_size, add_text, spacing, frame_type, default_frame_width, default_frame_depth, add_frame_to_all)
-    puts('importing images')
     entities  = Sketchup.active_model.entities
     current_x = 0.mm
     bottom_offset = 30.mm
+
+    # number of images to import
+    number_of_images_to_import = image_files.length
+    image_import_counter = 0
 
     image_files.each do |image_file|
       # Extract image image and frame dimensions from the filename
@@ -109,13 +102,44 @@ module MyExtension
         frame_depth = frame_dimensions[4] ? frame_dimensions[4].to_i.mm : default_frame_depth
       end
 
+      # check if any of the frame dimensions is smaller than corresponding image dimension, if yes report the error and skip the image
+      if frame_dimensions && (frame_width <= width || frame_height <= height)
+        puts "Frame dimensions are smaller than image dimensions in #{image_file}"
+        next
+      end
 
+      # If the image dimensions are found, fonstruct the image with box and text and frame if applicable.
       if image_dimensions
+
+        # Frmae Logic
+        # if frame type is larger than 0, add a frame
+        if frame_type > 0
+          # if there is a name match
+          if frame_dimensions
+            current_x += (frame_width - width) / 2
+            frame = build_frame(frame_width, frame_height, frame_depth, width, height, depth, frame_type, current_x,)
+            spacing_width = frame_width - (frame_width - width) / 2
+          #  if add_frame_to_all is true
+          elsif add_frame_to_all
+            current_x += (default_frame_width - width) / 2
+            frame = build_frame(width + 2 * default_frame_width, height + 2 * default_frame_width, default_frame_depth, width, height, depth, frame_type, current_x)
+            spacing_width = width + default_frame_width
+          else
+            spacing_width = width
+          end
+        end
+
+        # if frame exisits add the frame to frames layer
+        if frame
+          frame.layer = Sketchup.active_model.layers['frames']
+        end
+
+
         # Import the image
         image = entities.add_image(image_file, [current_x, -height / 2, depth], width, height)
-        spacing_width = width
         # add the image to the images layer
         image.layer = Sketchup.active_model.layers['images']
+        image_import_counter += 1
         
         # Create a box under the image
         box = build_box(entities, image, depth)
@@ -129,24 +153,7 @@ module MyExtension
           text_group.layer = Sketchup.active_model.layers['names']
         end
 
-        # Frmae Logic
-        # if frame type is larger than 0, add a frame
-        if frame_type > 0
-          # if there is a name match
-          if frame_dimensions
-            frame = build_frame(frame_width, frame_height, frame_depth, width, height, depth, frame_type, current_x,)
-            spacing_width = frame_width
-          #  if add_frame_to_all is true
-          elsif add_frame_to_all
-            frame = build_frame(width + 2 * default_frame_width, height + 2 * default_frame_width, default_frame_depth, width, height, depth, frame_type, current_x)
-            spacing_width = width + 2 * default_frame_width
-          end
-        end
 
-        # if frame exisits add the frame to frames layer
-        if frame
-          frame.layer = Sketchup.active_model.layers['frames']
-        end
 
         # Group the image, box, and text and frame together if they exist
         if frame && text_group
@@ -165,6 +172,7 @@ module MyExtension
       else
         # if there is no match, skip the image
         puts "No image dimensions found in #{image_file}"
+        next
       end
                       
 
@@ -174,10 +182,12 @@ module MyExtension
       current_x += spacing_width + spacing
 
       Sketchup.active_model.commit_operation
-      puts 'import completed'
+      
 
 
     end
+    puts ("import completed #{image_import_counter} of #{number_of_images_to_import}")
+
   end
 
   def self.import_images_from_table(table, image_depth, text_size, add_text, spacing)
