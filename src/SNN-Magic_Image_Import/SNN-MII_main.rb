@@ -24,7 +24,7 @@ module MyExtension
       dialog.add_action_callback('ok_callback') { |action_context, data_json|
 
         # start the operation
-        Sketchup.active_model.start_operation('Import Images', true)
+        Sketchup.active_model.start_operation('Import Images', false)
 
         # Parse the JSON data received from the HTML
         data = JSON.parse(data_json)
