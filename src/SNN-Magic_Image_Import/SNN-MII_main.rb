@@ -40,6 +40,8 @@ module MyExtension
         # check for existance of relevant layers
         MyExtension.check_layers(['frames', 'images', 'names', 'art'])
 
+        # check for existance of relevant materials
+        MyExtension.check_materials({'art-frames' => [255,255,255], 'art-box' => [255,255,255], 'art-text' => [0, 0, 0]})
 
         MyExtension.import_images_from_files(selected_files, default_image_depth, text_size, add_text, spacing, frame_type, default_frame_width, default_frame_depth, add_frame_to_all)
 
@@ -60,6 +62,17 @@ module MyExtension
       layer = Sketchup.active_model.layers[layer_name]
       if layer.nil?
         layer = Sketchup.active_model.layers.add(layer_name)
+      end
+    end
+  end
+
+  def self.check_materials(materials_names)
+    # checks if the materials in materials_names exist and creates them if they dont. Specity the color in the array as [r,g,b]
+    materials_names.each do |material_name, color|
+      material = Sketchup.active_model.materials[material_name]
+      if material.nil?
+        material = Sketchup.active_model.materials.add(material_name)
+        material.color = Sketchup::Color.new(color[0], color[1], color[2])
       end
     end
   end
@@ -127,6 +140,8 @@ module MyExtension
         # if frame exisits add the frame to frames layer
         if frame
           frame.layer = Sketchup.active_model.layers['frames']
+          # assign a material to the frame
+          frame.material = Sketchup.active_model.materials['art-frames']
         end
 
         # Import the image
@@ -139,12 +154,16 @@ module MyExtension
         box = build_box(entities, image, depth)
         # add the box to the images layer        
         box.layer = Sketchup.active_model.layers['images']
+        # assign a material to the box
+        box.material = Sketchup.active_model.materials['art-box']
 
         # Add text object with the file name (without extension) if add_text is true
         if add_text
           text_group = addNameText(entities, File.basename(image_file, '.*'), text_size, current_x, -height / 2 + bottom_offset, depth, width)
           # add the text to the names layer
           text_group.layer = Sketchup.active_model.layers['names']
+          # assign a material to the text
+          text_group.material = Sketchup.active_model.materials['art-text']
         end
 
         # Group the image, box, and text and frame together if they exist
