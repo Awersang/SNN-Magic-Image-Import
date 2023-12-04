@@ -13,6 +13,10 @@ module MyExtension
       dialog.set_file(html_path)
       dialog.center
 
+      dialog.add_action_callback('puts_callback') { |dialog, params|
+        # Handle the callback from the HTML here
+        puts("Callback received with parameters2: #{params}")
+      }
       # Define the callback for the "ok_callback"
       dialog.add_action_callback('ok_callback') { |action_context, data_json|
         # Parse the JSON data received from the HTML
@@ -68,11 +72,16 @@ module MyExtension
         width = match[1].to_i.mm
         height = match[2].to_i.mm
 
+        puts('widthhhhhh', width)
+        puts('heightttttt', height)
+
         # Import the image
         image = entities.add_image(image_file, [current_x, 0, box_height], width, height)
 
         # Create a bounding box around the image
         box = buildBox(entities, image, box_height)
+
+        frame = buildFrame(entities, box_height, frame_depth, width, height, frame_width, frame_height)
 
         # Add text object with the file name (without extension) if add_text is true
         if add_text
@@ -148,6 +157,42 @@ module MyExtension
 
     return box
   end
+
+def self.buildFrame(entities, box_height, frame_depth, width, height, frame_width, frame_height)
+  # Creates a frame around the Box, the internal dimensions maches the box the external dimensions are defined by the frame_width and frame_height.
+  # The frame internal depth is matching the box height. And the frame external depth is defined by the frame_depth.
+  # The frame is centered on the box.
+  frame = entities.add_group
+  frame_corners = [
+    [-(frame_width/2), -(frame_height/2), 0],
+    [-(frame_width/2), (frame_height/2), 0],
+    [(frame_width/2), (frame_height/2), 0],
+    [(frame_width/2), -(frame_height/2), 0]
+  ]
+  face = frame.entities.add_face(frame_corners)
+  face.pushpull(-box_height)
+  face.pushpull(frame_depth)
+  # Remove the top face of the frame
+  top_face = frame.entities.grep(Sketchup::Face).find { |f| f.normal.z == 1 }
+  top_face.erase! if top_face
+
+  # Position the frame in center horizontally and offset from the bottom of the image by a given amount
+  frame_position = [
+    (width/2),
+    (height/2),
+    box_height
+  ]
+  transformation = Geom::Transformation.translation(frame_position) 
+  frame.transform!(transformation)
+
+  # Color the frame
+  frame.material = Sketchup::Color.new(0, 0, 0)
+
+  return frame
+end
+
+
+
 
   def self.addNameText(entities, text_string, text_size, current_x, bottom_offset, box_height, width)
     # Add a 3d text object with the file name (without extension)

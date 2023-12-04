@@ -207,6 +207,16 @@
       messageBox.innerHTML += message + "<br>";
     }
 
+    function puts(message) {
+      // Define parameters to send back to the Ruby callback
+      var params = {
+        message: message
+      };
+      // Send the callback to the Ruby script
+      window.location = 'skp:puts_callback@' + encodeURIComponent(JSON.stringify(params));
+    }
+
+
     // TABS - Define a function to handle tab switching
     function switchTab(event) {
       event.preventDefault();
@@ -392,6 +402,7 @@
     // Function to handle the OK button click
     document.getElementById("ok").addEventListener("click", function () {
       // Get the selected files
+      puts('dupa')
       var selectedFiles = [];
       var fileInput = document.getElementById("files");
       for (var i = 0; i < fileInput.files.length; i++) {
@@ -446,6 +457,7 @@
     // Function to handle the Cancel button click
     document.getElementById("cancel").addEventListener("click", function () {
         // Close the dialog
+        puts('dupa2')
         window.location = 'skp:cancel_callback@';
       });
 
