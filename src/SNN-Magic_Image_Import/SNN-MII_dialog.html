@@ -41,6 +41,7 @@
       border: none;
       cursor: pointer;
       margin-right: 10px;
+      margin-top: 10px;
     }
 
     #cancel {
@@ -123,6 +124,16 @@
     .drawing-options {
       margin-top: 10px;
     }
+   
+    .grid-container {
+      display: grid;
+      grid-template-columns: auto auto;
+      grid-gap: 5px; /* Adjust as needed */
+    }
+    
+    .grid-item {
+      padding: 5px; /* Adjust as needed */
+    }
   </style>
   <title>Magic Image Import</title>
 </head>
@@ -135,33 +146,29 @@
   </div>
   <div class="tab active" id="from-files">
     <div class="container top">
-      <div class="left">
         <label for="folder">Select Files:</label>
         <input type="file" id="files" multiple>
-      </div>
     </div>
   </div>
   <div class="tab" id="from-table">
-    <div class="container top">
-      <div class="left">
+    <div class="tab grid-container" id="from-table">
+      <div class="grid-item">
         <label for="table-file">Select Table File:</label>
         <input type="file" id="table-file">
       </div>
-      <div class="right">
+      <div class="grid-item">
         <label for="spreadsheet">Spreadsheet:</label>
         <select id="spreadsheet">
           <option value="">Select Spreadsheet</option>
         </select>
       </div>
-    </div>
-    <div class="container bottom">
-      <div class="left">
+      <div class="grid-item">
         <label for="column-image-paths">Image Path Column :</label>
         <select id="column-image-paths">
           <option value="">Select Column</option>
         </select>
       </div>
-      <div class="right">
+      <div class="grid-item">
         <label for="column-image-size">Image Size Column:</label>
         <select id="column-image-size">
           <option value="">Select Column</option>
@@ -172,26 +179,47 @@
   <hr>
   <div class="drawing-options">
     <div class="drawing-options-header">Drawing Options</div>
-    <div class="container top">
-      <div class="left">
+    <div class="grid-container">
+      <div class="grid-item">
         <div class="checkbox-container">
           <input type="checkbox" id="add_text" checked>
           <label class="checkbox-label" for="add_text">Add Text</label>
         </div>
       </div>
-      <div class="right">
+      <div class="grid-item">
         <label for="text_size">Text Size [mm]:</label>
         <input type="number" id="text_size" value="25">
       </div>
-    </div>
-    <div class="container bottom">
-      <div class="left">
+      <div class="grid-item">
+        <label for="frame_type">Frame type</label>
+        <select id="frame_type">
+          <option value="0">no frame</option>
+          <option value="1">basic</option>
+          <option value="2">simple</option>
+          <option value="3">detailed</option>
+        </select>
+      </div>
+      <div class="grid-item">
+        <div class="checkbox-container">
+          <input type="checkbox" id="add_to_all">
+          <label class="checkbox-label" for="add_to_all">Add frame to all</label>
+        </div>
+      </div>
+      <div class="grid-item">
+        <label for="number1">Default frame width [mm]:</label>
+        <input type="number" id="frame_width" value="100">
+      </div>
+      <div class="grid-item">
+        <label for="number2">Default frame depth [mm]:</label>
+        <input type="number" id="frame_depth" value="50">
+      </div>
+      <div class="grid-item">
         <label for="spacing">Spacing [mm]:</label>
         <input type="number" id="spacing" value="100">
       </div>
-      <div class="right">
+      <div class="grid-item">
         <label for="depth">Item depth [mm]:</label>
-        <input type="number" id="depth" value="10">
+        <input type="number" id="depth" value="20">
       </div>
     </div>
   </div>
@@ -239,9 +267,6 @@
     for (var i = 0; i < tabLinks.length; i++) {
       tabLinks[i].addEventListener("click", switchTab);
     }
-
-
-
 
     // The TABLE - Event listeners to handle the file input change
     document.getElementById("table-file").addEventListener("change", function () {
@@ -397,9 +422,7 @@
       });
     }
 
-  
-
-    // Function to handle the OK button click
+      // Function to handle the OK button click
     document.getElementById("ok").addEventListener("click", function () {
       // Get the selected files
       puts('dupa')
@@ -412,6 +435,10 @@
       var depthValue = document.getElementById("depth").value;   // Get the depth value
       var textSize = document.getElementById("text_size").value; // Get the text size
       var addText = document.getElementById("add_text").checked; // Get the add text checkbox value
+      var frameType = document.getElementById("frame_type").value; // Get the frame type
+      var frameWidth = document.getElementById("frame_width").value; // Get the frame width
+      var frameDepth = document.getElementById("frame_depth").value; // Get the frame depth
+      var addFrameToAll = document.getElementById("add_to_all").checked; // Get the add frame to all checkbox value
       var spacing = document.getElementById("spacing").value; // Get the spacing value
       var tableFilePath = document.getElementById("table-file").value; // Get the table file path
       var spreadsheet = document.getElementById("spreadsheet").value; // Get the spreadsheet name
@@ -425,8 +452,11 @@
         text_size: textSize,
         add_text: addText,
         spacing: spacing,
+        frame_type: frameType,
+        frame_width: frameWidth,
+        frame_depth: frameDepth,
+        add_frame_to_all: addFrameToAll,
       };
-
 
 
       if (columnImagePaths && columnImageSize) {
@@ -453,11 +483,9 @@
 
     });
 
-
     // Function to handle the Cancel button click
     document.getElementById("cancel").addEventListener("click", function () {
         // Close the dialog
-        puts('dupa2')
         window.location = 'skp:cancel_callback@';
       });
 

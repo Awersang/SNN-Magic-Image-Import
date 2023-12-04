@@ -73,13 +73,21 @@ def move_profiles_up(frame, profiles, distances)
     frame
 end
 
-def draw_base_frame(entities, fw,fh,w,h,d)
+def draw_base_frame(entities, fw,fh,w,h,d, current_x)
     # Create a new group for the outer square
     frame = entities.add_group
-    outer_face = frame.entities.add_face([0, 0, 0], [fw, 0, 0], [fw, fh, 0], [0, fh, 0])
+    outer_face = frame.entities.add_face(
+        [current_x - (fw - w) / 2, -fh/2, 0], 
+        [current_x + fw - (fw - w) / 2, -fh/2, 0], 
+        [current_x + fw - (fw - w) / 2, fh/2, 0], 
+        [current_x - (fw - w) / 2, fh/2, 0])
 
     # Create the inner square hole
-    inner_face = frame.entities.add_face([fw / 2 - w / 2, fh / 2 - h / 2, 0], [fw / 2 + w / 2, fh / 2 - h / 2, 0], [fw / 2 + w / 2, fh / 2 + h / 2, 0], [fw / 2 - w / 2, fh / 2 + h / 2, 0])
+    inner_face = frame.entities.add_face(
+        [current_x + fw / 2 - w / 2 - (fw - w) / 2, -h / 2, 0], 
+        [current_x + fw / 2 + w / 2 - (fw - w) / 2, -h / 2, 0], 
+        [current_x + fw / 2 + w / 2 - (fw - w) / 2, h / 2, 0], 
+        [current_x + fw / 2 - w / 2 - (fw - w) / 2, h / 2, 0])
 
     # Get the vertices of the inner square before erasing it
     inner_vertices = inner_face.vertices.map(&:position)
@@ -88,7 +96,7 @@ def draw_base_frame(entities, fw,fh,w,h,d)
     inner_face.erase!
 
     # Push the face up by 20mm
-    outer_face.pushpull(d)
+    outer_face.pushpull(-d)
 
     # Get the new top face
     top_face = frame.entities.grep(Sketchup::Face).find { |f| f.normal.z > 0 }
@@ -132,12 +140,13 @@ def shape_the_frame(frame, lines, distances, divisions)
     profiles = create_lines_from_points_arrays(frame, vertices)
     
     # Shape the profiles
+    puts("distances", distances)
     frame = move_profiles_up(frame, profiles, distances)
 
     return frame, profiles
 end
 
-def build_frame(fw,fh,fd,w,h,d, type)
+def build_frame(fw,fh,fd,w,h,d, type, current_x)
 
     model = Sketchup.active_model
     entities = model.active_entities
@@ -147,7 +156,7 @@ def build_frame(fw,fh,fd,w,h,d, type)
 
     # Define the frame types
     frame_types = {
-        1 => {distances: [0, 30], divisions: []},
+        1 => {distances: [0, 1], divisions: []},
         2 => {distances: [0.0, 0.1, 0.0, 1.0, 1.0], divisions: [0.05, 0.1, 0.9]},
         3 => {distances: [0.0, 0.066, 0.083, 0.066, 0.0, 0.1, 0.133, 0.1, 0.0, 0.0, 0.166, 0.46, 0.86, 1.0, 1.0],
             divisions: [0.01, 0.035, 0.06,   0.07, 0.1, 0.135, 0.17, 0.2,   0.4, 0.59, 0.77, 0.89, 0.9]}
@@ -157,15 +166,12 @@ def build_frame(fw,fh,fd,w,h,d, type)
     distances = frame_types[type][:distances].map { |distance| distance * (fd-d).to_mm }
     divisions = frame_types[type][:divisions]
     # puts("distances", distances)
-
-    # puts(fd, d, fd-d,(fd-d).mm)
-    # puts((fd-d).mm)
-
-    # z equals fd minus d
- 
+    
+    puts("look here", (fd-d).to_mm)
+    puts("look here", distances)
 
     # Draw the base frame
-    frame, lines = draw_base_frame(entities, fw,fh,w,h,d)
+    frame, lines = draw_base_frame(entities, fw,fh,w,h,d, current_x)
     
     # Shape the frame
     frame, profiles = shape_the_frame(frame, lines, distances, divisions)
@@ -182,23 +188,48 @@ def build_frame(fw,fh,fd,w,h,d, type)
     frame
 end
 
-model = Sketchup.active_model
-entities = model.active_entities
-# # clear the model
-entities.clear!
 
-# Define the dimensions of the outer square
-fw = 600.mm
-fh = 700.mm
-fd = 100.mm
 
-# Define the dimensions of the inner square
-w = 500.mm
-h = 500.mm
-d = 20.mm
 
-# Define the frame type (1, 2, or 3)
-type = 3
 
-build_frame(fw,fh,fd,w,h,d, type)
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# model = Sketchup.active_model
+# entities = model.active_entities
+# # # clear the model
+# entities.clear!
+
+# # Define the dimensions of the outer square
+# fw = 600.mm
+# fh = 700.mm
+# fd = 100.mm
+
+# # Define the dimensions of the inner square
+# w = 500.mm
+# h = 500.mm
+# d = 20.mm
+
+# # Define the frame type (1, 2, or 3)
+# type = 3
+
+# build_frame(fw,fh,fd,w,h,d, type, current_x)
+
+# Sketchup.active_model.active_entities.clear!

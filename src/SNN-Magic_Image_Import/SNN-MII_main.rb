@@ -1,3 +1,5 @@
+require_relative 'frame'
+
 module MyExtension
   module Dialog
     def self.open_dialog
@@ -5,8 +7,8 @@ module MyExtension
       options = {
         dialog_title: 'SNN - Magic Image Import',
         style: UI::HtmlDialog::STYLE_DIALOG,
-        width: 600,
-        height: 520,
+        width: 500,
+        height: 750,
       }
       dialog = UI::HtmlDialog.new(options)
       dialog.set_size(options[:width], options[:height])
@@ -15,8 +17,9 @@ module MyExtension
 
       dialog.add_action_callback('puts_callback') { |dialog, params|
         # Handle the callback from the HTML here
-        puts("Callback received with parameters2: #{params}")
-      }
+        params = JSON.parse(params)
+        puts "Callback received with parameters2: #{params}"
+      }
       # Define the callback for the "ok_callback"
       dialog.add_action_callback('ok_callback') { |action_context, data_json|
         # Parse the JSON data received from the HTML
@@ -25,26 +28,34 @@ module MyExtension
         puts('data loaded')
         # Extract the data from the data object
         selected_files = data['files']
-        depth_value = data['depth'].to_i.mm
+        default_image_depth = data['depth'].to_i.mm
         text_size = data['text_size'].to_i.mm
         add_text = data['add_text']
         spacing = data['spacing'].to_i.mm
         table = data['table']
+        frame_type = data['frame_type'].to_i
+        default_frame_width = data['frame_width'].to_i.mm
+        default_frame_depth = data['frame_depth'].to_i.mm
+        add_frame_to_all = data['add_frame_to_all']
 
 
         # Handle the data as needed
         puts "Selected Files: #{selected_files}"
-        puts "Depth Value: #{depth_value}"
+        puts "Depth Value: #{default_image_depth}"
         puts "Text Size: #{text_size}"
         puts "Add Text: #{add_text}"
         puts "Spacing: #{spacing}"
         puts "Table : #{table}"
 
+
+        # check for existance of relevant layers
+        MyExtension.check_layers(['frames', 'images', 'names', 'art'])
+
         #check if table is empty
         if table.nil?
-          MyExtension.importImagesFromFiles(selected_files, depth_value, text_size, add_text, spacing)
+          MyExtension.import_images_from_files(selected_files, default_image_depth, text_size, add_text, spacing, frame_type, default_frame_width, default_frame_depth, add_frame_to_all)
         else
-          MyExtension.importImagesFromTable(table, depth_value, text_size, add_text, spacing)
+          MyExtension.import_images_from_table(table, default_image_depth, text_size, add_text, spacing)
         end
         # Close the dialog if needed
         dialog.close
@@ -58,52 +69,118 @@ module MyExtension
   end
 
 
-  def self.importImagesFromFiles(image_files, box_height, text_size, add_text, spacing)
+  def self.check_layers(layers_names)
+    # checks if the layers in layers_names exist and creates them if they dont.
+    layers_names.each do |layer_name|
+      layer = Sketchup.active_model.layers[layer_name]
+      if layer.nil?
+        layer = Sketchup.active_model.layers.add(layer_name)
+      end
+    end
+  end
+
+  def self.import_images_from_files(image_files, default_image_depth, text_size, add_text, spacing, frame_type, default_frame_width, default_frame_depth, add_frame_to_all)
     puts('importing images')
     entities  = Sketchup.active_model.entities
     current_x = 0.mm
     bottom_offset = 30.mm
 
     image_files.each do |image_file|
-      # Extract image dimensions from the filename (assuming format: "widthXheight")
-      match = File.basename(image_file).match(/(\d+)x(\d+)/)
-      if match
-        puts('importing image', image_file)
-        width = match[1].to_i.mm
-        height = match[2].to_i.mm
+      # Extract image image and frame dimensions from the filename
+      # image dimensions are in the format " widthxheightxdepth "
+      # frame dimensions are in the format "(widthxheightxdepth)"
+      # depth is optional for both image and frame
 
-        puts('widthhhhhh', width)
-        puts('heightttttt', height)
+      # Extract the image dimensions
+      image_dimensions = image_file.match(/(?<!\()\b(\d+)x(\d+)(x(\d+))?\b(?!x|\))/)
+      # if there is a match, extract the dimensions
+      if image_dimensions
+        width = image_dimensions[1].to_i.mm
+        height = image_dimensions[2].to_i.mm
+        depth = image_dimensions[4] ? image_dimensions[4].to_i.mm : default_image_depth
+      end
 
+      # Extract the frame dimensions
+      frame_dimensions = image_file.match(/\((\d+)x(\d+)(x(\d+))?\)/)
+      # if there is a match, extract the dimensions
+      if frame_dimensions
+        frame_width = frame_dimensions[1].to_i.mm
+        frame_height = frame_dimensions[2].to_i.mm
+        frame_depth = frame_dimensions[4] ? frame_dimensions[4].to_i.mm : default_frame_depth
+      end
+
+
+      if image_dimensions
         # Import the image
-        image = entities.add_image(image_file, [current_x, 0, box_height], width, height)
-
-        # Create a bounding box around the image
-        box = buildBox(entities, image, box_height)
-
-        frame = buildFrame(entities, box_height, frame_depth, width, height, frame_width, frame_height)
+        image = entities.add_image(image_file, [current_x, -height / 2, depth], width, height)
+        spacing_width = width
+        # add the image to the images layer
+        image.layer = Sketchup.active_model.layers['images']
+        
+        # Create a box under the image
+        box = build_box(entities, image, depth)
+        # add the box to the images layer        
+        box.layer = Sketchup.active_model.layers['images']
 
         # Add text object with the file name (without extension) if add_text is true
         if add_text
-          text_group = addNameText(entities, File.basename(image_file, '.*'), text_size, current_x, bottom_offset, box_height, width)
-          # Group the image, box, and text together
+          text_group = addNameText(entities, File.basename(image_file, '.*'), text_size, current_x, -height / 2 + bottom_offset, depth, width)
+          # add the text to the names layer
+          text_group.layer = Sketchup.active_model.layers['names']
+        end
+
+        # Frmae Logic
+        # if frame type is larger than 0, add a frame
+        if frame_type > 0
+          # if there is a name match
+          if frame_dimensions
+            frame = build_frame(frame_width, frame_height, frame_depth, width, height, depth, frame_type, current_x,)
+            spacing_width = frame_width
+          #  if add_frame_to_all is true
+          elsif add_frame_to_all
+            frame = build_frame(width + 2 * default_frame_width, height + 2 * default_frame_width, default_frame_depth, width, height, depth, frame_type, current_x)
+            spacing_width = width + 2 * default_frame_width
+          end
+        end
+
+        # if frame exisits add the frame to frames layer
+        if frame
+          frame.layer = Sketchup.active_model.layers['frames']
+        end
+
+        # Group the image, box, and text and frame together if they exist
+        if frame && text_group
+          image_group = entities.add_group([image, box, text_group, frame])
+        elsif frame
+          image_group = entities.add_group([image, box, frame])
+        elsif text_group
           image_group = entities.add_group([image, box, text_group])
         else
-          # Group the image and box together
           image_group = entities.add_group([image, box])
         end
 
-        # Increment the x position for the next image
-        current_x += width + spacing
+        # add the image group to the art layer
+        image_group.layer = Sketchup.active_model.layers['art']
 
-        Sketchup.active_model.commit_operation
-        puts 'import completed'
+      else
+        # if there is no match, skip the image
+        puts "No image dimensions found in #{image_file}"
       end
+                      
+
+
+
+      # Increment the x position for the next image
+      current_x += spacing_width + spacing
+
+      Sketchup.active_model.commit_operation
+      puts 'import completed'
+
+
     end
   end
 
-
-  def self.importImagesFromTable(table, box_height, text_size, add_text, spacing)
+  def self.import_images_from_table(table, image_depth, text_size, add_text, spacing)
     entities  = Sketchup.active_model.entities
     current_x = 0.mm
     bottom_offset = 30.mm
@@ -114,14 +191,14 @@ module MyExtension
       height = row[1][2].to_i.mm
 
       # Import the image
-      image = entities.add_image(row[0], [current_x, 0, box_height], width, height)
+      image = entities.add_image(row[0], [current_x, 0, image_depth], width, height)
 
       # Create a bounding box around the image
-      box = buildBox(entities, image, box_height)
+      box = build_box(entities, image, image_depth)
 
       # Add text object with the file name (without extension) if add_text is true
       if add_text
-        text_group = addNameText(entities, File.basename(row[0], '.*'), text_size, current_x, bottom_offset, box_height, width)
+        text_group = addNameText(entities, File.basename(row[0], '.*'), text_size, current_x, bottom_offset, image_depth, width)
         # Group the image, box, and text together
         image_group = entities.add_group([image, box, text_group])
       else
@@ -138,7 +215,7 @@ module MyExtension
     end
   end
 
-  def self.buildBox(entities, image, box_height)
+  def self.build_box(entities, image, image_depth)
     # Create a bounding box around the image
     box = entities.add_group
     bb = image.bounds
@@ -149,7 +226,7 @@ module MyExtension
       [bb.min.x, bb.max.y, 0]
     ]
     face = box.entities.add_face(box_corners)
-    face.pushpull(-box_height)
+    face.pushpull(-image_depth)
 
     # Remove the top face of the box
     top_face = box.entities.grep(Sketchup::Face).find { |f| f.normal.z == 1 }
@@ -158,43 +235,7 @@ module MyExtension
     return box
   end
 
-def self.buildFrame(entities, box_height, frame_depth, width, height, frame_width, frame_height)
-  # Creates a frame around the Box, the internal dimensions maches the box the external dimensions are defined by the frame_width and frame_height.
-  # The frame internal depth is matching the box height. And the frame external depth is defined by the frame_depth.
-  # The frame is centered on the box.
-  frame = entities.add_group
-  frame_corners = [
-    [-(frame_width/2), -(frame_height/2), 0],
-    [-(frame_width/2), (frame_height/2), 0],
-    [(frame_width/2), (frame_height/2), 0],
-    [(frame_width/2), -(frame_height/2), 0]
-  ]
-  face = frame.entities.add_face(frame_corners)
-  face.pushpull(-box_height)
-  face.pushpull(frame_depth)
-  # Remove the top face of the frame
-  top_face = frame.entities.grep(Sketchup::Face).find { |f| f.normal.z == 1 }
-  top_face.erase! if top_face
-
-  # Position the frame in center horizontally and offset from the bottom of the image by a given amount
-  frame_position = [
-    (width/2),
-    (height/2),
-    box_height
-  ]
-  transformation = Geom::Transformation.translation(frame_position) 
-  frame.transform!(transformation)
-
-  # Color the frame
-  frame.material = Sketchup::Color.new(0, 0, 0)
-
-  return frame
-end
-
-
-
-
-  def self.addNameText(entities, text_string, text_size, current_x, bottom_offset, box_height, width)
+  def self.addNameText(entities, text_string, text_size, current_x, bottom_offset, image_depth, width)
     # Add a 3d text object with the file name (without extension)
     text_group = entities.add_group
     text_group.entities.add_3d_text(text_string, TextAlignCenter, "Arial", text_size)
@@ -235,7 +276,7 @@ end
     text_position = [
       current_x + (width - text_width) / 2,
       bottom_offset,
-      box_height
+      image_depth
     ]
     transformation = Geom::Transformation.translation(text_position) 
     text_group.transform!(transformation)
